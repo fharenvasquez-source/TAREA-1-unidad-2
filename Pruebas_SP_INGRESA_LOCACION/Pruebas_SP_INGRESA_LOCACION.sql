@@ -1,0 +1,116 @@
+﻿
+USE DistribucionHardware; 
+GO
+
+IF OBJECT_ID('SP_INGRESA_LOCACION', 'P') IS NULL
+    RAISERROR('Falta crear el procedimiento SP_INGRESA_LOCACION.', 16, 1);
+GO
+
+IF OBJECT_ID('tempdb..#RESULTADOS') IS NOT NULL DROP TABLE #RESULTADOS;
+CREATE TABLE #RESULTADOS (
+    N                 INT IDENTITY(1,1),
+    PRUEBA            VARCHAR(70),
+    ESPERADO          INT,
+    OBTENIDO          INT,
+    MENSAJE           VARCHAR(200),
+    TRANCOUNT_DESPUES INT
+);
+ 
+DELETE FROM LOCATIONS WHERE LOCATION_ID BETWEEN 101 AND 120;
+
+
+SELECT COUNT(*) AS TOTAL_LOCATIONS_INICIAL FROM LOCATIONS;
+GO
+
+DECLARE @R INT, @M VARCHAR(200);
+DECLARE @ANTES INT = (SELECT COUNT(*) FROM LOCATIONS);
+
+EXEC SP_INGRESA_LOCACION 101, N'Calle Durango 215, Col. Roma', N'06700', N'Ciudad de Mexico', N'CDMX', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 01 - Mexico', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 102, N'Av. Paulista 1578', N'01310-200', N'Sao Paulo', N'Sao Paulo', 'BR', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 02 - Brasil', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 103, N'Av. Corrientes 1234', N'C1043', N'Buenos Aires', N'Buenos Aires', 'AR', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 03 - Argentina', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 104, N'350 Fifth Avenue', N'10118', N'New York', N'New York', 'US', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 04 - Estados Unidos', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 105, N'100 King Street West', N'M5X 1A9', N'Toronto', N'Ontario', 'CA', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 05 - Canada', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 106, N'Friedrichstrasse 43', N'10117', N'Berlin', N'Berlin', 'DE', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 06 - Alemania', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 107, N'15 Rue de Rivoli', N'75001', N'Paris', N'Ile-de-France', 'FR', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 07 - Francia', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 108, N'Via del Corso 120', N'00186', N'Roma', N'Lazio', 'IT', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 08 - Italia', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 109, N'1-1 Marunouchi', N'100-0005', N'Tokyo', N'Tokyo Prefecture', 'JP', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 09 - Japon', 1, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 110, N'221B Baker Street', N'NW1 6XE', N'London', N'England', 'UK', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Exito 10 - Reino Unido', 1, @R, @M, @@TRANCOUNT);
+
+
+SELECT @ANTES                AS FILAS_ANTES,
+       COUNT(*)              AS FILAS_DESPUES,
+       COUNT(*) - @ANTES     AS FILAS_NUEVAS    
+FROM LOCATIONS;
+
+SELECT * FROM LOCATIONS WHERE LOCATION_ID BETWEEN 101 AND 110 ORDER BY LOCATION_ID;
+GO
+
+
+  -- PRUEBAS DE ERROR
+
+DECLARE @R INT, @M VARCHAR(200);
+DECLARE @ANTES INT = (SELECT COUNT(*) FROM LOCATIONS);
+--Valores nulos
+EXEC SP_INGRESA_LOCACION 111, NULL, N'64000', N'Monterrey', N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 01 - Direccion nula', 2, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 112, N'Av. Constitucion 400', NULL, N'Monterrey', N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 02 - Codigo postal nulo', 2, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 113, N'Av. Constitucion 400', N'64000', NULL, N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 03 - Ciudad nula', 2, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 114, N'Av. Constitucion 400', N'64000', N'Monterrey', NULL, 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 04 - Estado nulo', 2, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 115, N'Av. Constitucion 400', N'64000', N'Monterrey', N'Nuevo Leon', 'ZZ', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 05 - Pais inexistente (ZZ)', 3, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 116, N'Av. Constitucion 400', N'64000', N'Monterrey', N'Nuevo Leon', NULL, @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 06 - Pais nulo', 3, @R, @M, @@TRANCOUNT);
+
+EXEC SP_INGRESA_LOCACION 1, N'Av. Constitucion 400', N'64000', N'Monterrey', N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 07 - Codigo repetido (original, 1)', 4, @R, @M, @@TRANCOUNT);
+
+
+EXEC SP_INGRESA_LOCACION 101, N'Av. Constitucion 400', N'64000', N'Monterrey', N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 08 - Codigo repetido (de prueba, 101)', 4, @R, @M, @@TRANCOUNT);
+
+
+EXEC SP_INGRESA_LOCACION NULL, N'Av. Constitucion 400', N'64000', N'Monterrey', N'Nuevo Leon', 'MX', @R OUTPUT, @M OUTPUT;
+INSERT INTO #RESULTADOS VALUES ('Error 09 - Error SQL en CATCH (codigo nulo)', 0, @R, @M, @@TRANCOUNT);
+
+
+SELECT @ANTES   AS FILAS_ANTES,
+       COUNT(*) AS FILAS_DESPUES,
+       CASE WHEN COUNT(*) = @ANTES
+            THEN 'OK: no se guardo ninguna fila'
+            ELSE 'FALLA: se guardaron filas'
+       END      AS VERIFICACION
+FROM LOCATIONS;
+
+
+SELECT * FROM LOCATIONS WHERE LOCATION_ID BETWEEN 111 AND 120;
+GO
+
+
+
